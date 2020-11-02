@@ -18,6 +18,32 @@ def test_parser():
     assert p.username is not None
     
 
+def test_contest_leaderboard(p, test_directory, tprint):
+    """Tests contest_leaderboard"""
+    fn = test_directory / 'contest_leaderboard.json'
+    data = p._to_obj(fn)
+    lb = p.contest_leaderboard(data)
+    assert isinstance(lb, list)
+    l = random.choice(lb)
+    assert isinstance(l, dict)
+    fields = {'userName', 'userKey', 'draftGroupId', 'contestKey', 'entryKey', 'rank', 'fantasyPoints'}
+    assert fields <= set(l.keys())
+
+
+def test_contest_lineup(p, test_directory, tprint):
+    """Tests contest_lineup"""
+    fn = test_directory / 'contest_entry.json'
+    data = p._to_obj(fn)
+    entry = p.contest_entry(data)
+    assert isinstance(entry, dict)
+    lineup = entry.get('players')
+    assert isinstance(lineup, list)
+    player = random.choice(lineup)
+    assert isinstance(player, dict)
+    fields = {'displayName', 'rosterPosition', 'percentDrafted', 'draftableId', 'score', 
+              'statsDescription', 'timeRemaining'}
+    assert fields <= set(player.keys())
+
 def test_historical_contests(p, test_directory, tprint):
     """Tests historical_contests"""
     fn = test_directory / 'historical_contests.json'

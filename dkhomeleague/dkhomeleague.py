@@ -8,14 +8,7 @@ import pandas as pd
 from requests_html import HTMLSession
 import browser_cookie3
 
-try:
-    import pdsheet
-except ModuleNotFoundError:
-    import sys
-    from pathlib import Path
-    pth = Path(__file__).parent.parent.parent / 'pdsheet'
-    sys.path.append(str(pth))
-    import pdsheet
+import pdsheet
 
 
 class Scraper:
@@ -59,6 +52,27 @@ class Scraper:
 
     def _embed_params(self, embed_type):
         return dict(**self.base_params, **{'embed': embed_type})
+
+    def contest_leaderboard(self, contest_id):
+        """Gets contest leaderboard"""
+        url = self.api_url + f'scores/v1/megacontests/{contest_id}/leaderboard'
+        params = self._embed_params('leaderboard')
+        return self.get_json(url, params=params)
+
+    def contest_lineup(self, draftgroup_id, entry_key):
+        """Gets contest lineup
+        
+        Args:
+            draftgroup_id (int): the draftgroupId
+            entry_key (int): the id for the user's entry into the contest
+                             can find entryKey in the leaderboard resource
+
+        Returns:
+            dict
+        """
+        url = self.api_url + f'scores/v2/entries/{draftgroup_id}/{entry_key}'
+        params = self._embed_params('roster')
+        return self.get_json(url, params=params)
 
     def get_json(self, url, params, headers=None, response_object=False):
         """Gets json resource"""
@@ -131,6 +145,38 @@ class Parser:
             pth = Path(pth)
         return json.loads(pth.read_text())
 
+    def contest_entry(self, data):
+        """Parses contest entry
+
+        Args:
+            data (dict): parsed JSON
+
+        Returns:
+            list: of dict
+        """
+        wanted = ['draftGroupId', 'contestKey', 'entryKey', 'lineupId', 'userName',
+                  'userKey', 'timeRemaining', 'rank', 'fantasyPoints']
+        player_wanted = ['displayName', 'rosterPosition', 'percentDrafted', 'draftableId', 'score', 
+                         'statsDescription', 'timeRemaining']
+        entry = data['entries'][0]
+        d = {k: entry[k] for k in wanted}
+        d['players'] = []
+        for player in entry['roster']['scorecards']:
+            d['players'].append({k: player[k] for k in player_wanted})
+        return d
+
+    def contest_leaderboard(self, data):
+        """Parses contest leaderboard
+
+        Args:
+            data (dict): parsed JSON
+
+        Returns:
+            list: of dict
+        """
+        wanted = ['userName', 'userKey', 'draftGroupId', 'contestKey', 'entryKey', 'rank', 'fantasyPoints']
+        return [{k: item.get(k) for k in wanted} for item in data['leaderBoard']]
+        
     def historical_contests(self, data):
         """Parses historical league contests
 
